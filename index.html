@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>消费决策器 Pro</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --warning: #ca8a04;
+            --danger: #dc2626;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #0f172a;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 20px; line-height: 1.5; max-width: 600px; margin: 0 auto; padding-bottom: 120px;}
+        h1 { text-align: center; font-size: 1.4rem; margin-bottom: 5px; color: var(--primary); }
+        .designed-by { text-align: center; font-size: 0.85rem; color: #64748b; margin-bottom: 15px;}
+        
+        /* Input Name */
+        .item-name-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+
+        /* Tab Switching */
+        .tabs { display: flex; margin-bottom: 15px; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; background: #e2e8f0; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #64748b; transition: 0.2s; }
+        .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* Form Elements */
+        .card { background: var(--card); padding: 15px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .section-title { font-weight: 700; margin-bottom: 12px; font-size: 0.95rem; color: #334155; border-left: 4px solid var(--primary); padding-left: 8px; }
+        
+        .control-group { margin-bottom: 18px; }
+        .label-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; font-weight: 600; }
+        .desc-row { display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; }
+        
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 6px; background: #e2e8f0; border-radius: 5px; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: white; cursor: pointer; border: 2px solid var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Result Box - Fixed Bottom */
+        .result-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); padding: 10px 20px; box-shadow: 0 -4px 15px rgba(0,0,0,0.08); z-index: 100; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; max-width: 600px; margin: 0 auto; border-top: 1px solid #e2e8f0; }
+        .res-text { flex: 1; min-width: 120px; margin-bottom: 5px;}
+        .score-display { font-size: 1.8rem; font-weight: 800; line-height: 1; color: var(--primary); }
+        .verdict-display { font-size: 0.8rem; font-weight: 700; margin-top: 2px; }
+        .score-hint { font-size: 0.7rem; color: #64748b; margin-top: 5px; } /* New Style for Hint */
+        
+        .action-group { display: flex; align-items: center; }
+        #decisionSelect { padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 0.9rem; margin-right: 10px; }
+        .save-btn { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+        .save-btn:active { transform: scale(0.96); }
+
+        /* History Section */
+        .history-section { margin-top: 30px; border-top: 2px dashed #cbd5e1; padding-top: 20px; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .history-list { list-style: none; padding: 0; }
+        .history-item { background: white; padding: 12px; margin-bottom: 10px; border-radius: 8px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #ccc; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .h-info { display: flex; flex-direction: column; }
+        .h-name { font-weight: bold; font-size: 1rem; }
+        .h-date { font-size: 0.75rem; color: #94a3b8; }
+        .h-score { font-weight: bold; font-size: 1.1rem; text-align: right; margin-top: 4px;}
+        .btn-clear { font-size: 0.8rem; color: #ef4444; background: none; border: 1px solid #ef4444; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+        
+        /* Editable Decision Styles */
+        .h-decision-group { text-align: right; }
+        .h-decision-select { padding: 3px 5px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.75rem; background: #fff; cursor: pointer; font-weight: bold; max-width: 100px; }
+
+
+        /* Dynamic Colors for Score/Verdict */
+        .c-green { color: var(--success); } .b-green { border-color: var(--success); }
+        .c-yellow { color: var(--warning); } .b-yellow { border-color: var(--warning); }
+        .c-red { color: var(--danger); } .b-red { border-color: var(--danger); }
+        
+        /* Dynamic Colors for Final Decision (History Item Background) */
+        .d-buy { border-left-color: var(--success) !important; }
+        .d-wait { border-left-color: var(--warning) !important; }
+        .d-stop { border-left-color: var(--danger) !important; }
+
+        /* New Monthly Stats Card */
+        .stats-card { background: var(--card); padding: 15px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; border-top: 4px solid var(--primary); }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+        .stat-item { border-right: 1px solid #e2e8f0; padding: 0 5px; }
+        .stat-item:last-child { border-right: none; }
+        .stat-label { font-size: 0.8rem; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+        .stat-amount { font-size: 1rem; font-weight: 700; line-height: 1.2;}
+        .stat-count { font-size: 0.75rem; color: #94a3b8; }
+        .stat-item.saved .stat-amount { color: var(--success); }
+        .stat-item.impulse .stat-amount { color: var(--danger); }
+        .stat-item.rational .stat-amount { color: var(--primary); }
+
+
+        @media (max-width: 450px) {
+            .result-bar { flex-direction: column; align-items: stretch; }
+            .action-group { justify-content: space-between; margin-top: 10px; }
+            #decisionSelect { flex: 1; margin-right: 5px; }
+            .save-btn { flex: 1; }
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧠 消费决策器 Pro</h1>
+    <h2 class="designed-by">Designed by H.H</h2>
+    
+    <input type="text" id="itemName" class="item-name-input" placeholder="输入你想买的东西（例如：iPhone 16）...">
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('elec')">📱 电子产品</button>
+        <button class="tab-btn" onclick="switchTab('cloth')">👔 服饰鞋包</button>
+    </div>
+
+    <div id="elec" class="panel active">
+        <div class="card">
+            <div class="section-title">💰 价格信息</div>
+            <div class="control-group">
+                <div class="label-row"><span>项目价格 (元)</span><span id="v-price-elec">0</span></div>
+                <input type="range" min="0" max="10000" step="100" value="0" id="price-elec" oninput="updatePrice('elec')">
+                <div class="desc-row"><span>0: 免费/极低</span><span>10000+: 极高</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="section-title">一、必要性 (35%)</div>
+            <div class="control-group">
+                <div class="label-row"><span>1. 不可替代性</span><span id="v-e1">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="e1" oninput="calc()">
+                <div class="desc-row"><span>0:高不可替代性(必须买)</span><span>5:低不可替代性(完全能替代)</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>2. 紧急性</span><span id="v-e2">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="e2" oninput="calc()">
+                <div class="desc-row"><span>0:严重影响工作/生活</span><span>5:完全不影响</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>3. 使用频率预期</span><span id="v-e3">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="e3" oninput="calc()">
+                <div class="desc-row"><span>0:高频使用</span><span>5:低频或不确定</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="section-title">二、成本效益 (35%)</div>
+            <div class="control-group">
+                <div class="label-row"><span>4. 性能溢价</span><span id="v-e4">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="e4" oninput="calc()">
+                <div class="desc-row"><span>0:提升非常明显</span><span>5:提升有限/挤牙膏</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>5. 价格合理性</span><span id="v-e5">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="e5" oninput="calc()">
+                <div class="desc-row"><span>0:历史低位/极具性价比</span><span>5:明显偏高</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>6. 折旧速度</span><span id="v-e6">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="e6" oninput="calc()">
+                <div class="desc-row"><span>0:折旧较慢/耐用</span><span>5:折旧极快/更新快</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="section-title">三、心理动机 (30%)</div>
+            <div class="control-group">
+                <div class="label-row"><span>7. 冲动性</span><span id="v-e7">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="e7" oninput="calc()">
+                <div class="desc-row"><span>0:完全基于需求</span><span>5:因情绪/压力/无聊而想买</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>8. 社交攀比/内容种草影响</span><span id="v-e8">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="e8" oninput="calc()">
+                <div class="desc-row"><span>0:完全自主判断</span><span>5:被影响强</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>9. 如果需要十五天后才发货 是否愿意购买</span><span id="v-e9">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="e9" oninput="calc()">
+                <div class="desc-row"><span>0:肯定会（真实需求）</span><span>5:大概率不会（冷静期有效）</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cloth" class="panel">
+        <div class="card">
+            <div class="section-title">💰 价格信息</div>
+            <div class="control-group">
+                <div class="label-row"><span>项目价格 (元)</span><span id="v-price-cloth">0</span></div>
+                <input type="range" min="0" max="10000" step="100" value="0" id="price-cloth" oninput="updatePrice('cloth')">
+                <div class="desc-row"><span>0: 免费/极低</span><span>10000+: 极高</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="section-title">一、实用性 (40%)</div>
+            <div class="control-group">
+                <div class="label-row"><span>1. 场景需求</span><span id="v-c1">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="c1" oninput="calc()">
+                <div class="desc-row"><span>0:很需要用于特定场景</span><span>5:不需要用于特定场景</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>2. 功能性</span><span id="v-c2">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="c2" oninput="calc()">
+                <div class="desc-row"><span>0:功能刚需（如保暖、防水）</span><span>5:不提供功能刚需</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>3. 重复度</span><span id="v-c3">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="c3" oninput="calc()">
+                <div class="desc-row"><span>0:完全没有替代品</span><span>5:已有多件类似</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="section-title">二、质量与生命周期 (30%)</div>
+            <div class="control-group">
+                <div class="label-row"><span>4. 质量可靠性</span><span id="v-c4">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="c4" oninput="calc()">
+                <div class="desc-row"><span>0:质量很优秀/耐穿</span><span>5:普通或一般</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>5. 适配度</span><span id="v-c5">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="c5" oninput="calc()">
+                <div class="desc-row"><span>0:非常契合（身材、风格）</span><span>5:一般或不确定</span></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="section-title">三、心理与财务 (30%)</div>
+            <div class="control-group">
+                <div class="label-row"><span>6. 冲动性</span><span id="v-c6">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="c6" oninput="calc()">
+                <div class="desc-row"><span>0:完全理性驱动</span><span>5:源于短期情绪或折扣</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>7. 预算压力</span><span id="v-c7">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="c7" oninput="calc()">
+                <div class="desc-row"><span>0:不影响储蓄计划</span><span>5:明显挤压储蓄</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>8. 穿着频率预期</span><span id="v-c8">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="c8" oninput="calc()">
+                <div class="desc-row"><span>0:频繁穿</span><span>5:很少穿</span></div>
+            </div>
+            <div class="control-group">
+                <div class="label-row"><span>9. 如果需要十五天后才发货 是否愿意购买</span><span id="v-c9">0</span></div>
+                <input type="range" min="0" max="5" value="0" id="c9" oninput="calc()">
+                <div class="desc-row"><span>0:肯定会（真实需求）</span><span>5:大概率不会（冷静期有效）</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="stats-card">
+        <div class="section-title">📊 本月消费概览 (<span id="currentMonth"></span>)</div>
+        <div class="stats-grid">
+            <div class="stat-item saved">
+                <div class="stat-label">已省 (笔数)</div>
+                <div class="stat-amount" id="savedCount">0</div>
+                <div class="stat-count" id="savedAmount">¥0</div>
+            </div>
+            <div class="stat-item impulse">
+                <div class="stat-label">冲动消费 (笔数)</div>
+                <div class="stat-amount" id="impulseCount">0</div>
+                <div class="stat-count" id="impulseAmount">¥0</div>
+            </div>
+            <div class="stat-item rational">
+                <div class="stat-label">合理消费 (笔数)</div>
+                <div class="stat-amount" id="rationalCount">0</div>
+                <div class="stat-count" id="rationalAmount">¥0</div>
+            </div>
+        </div>
+    </div>
+    <div class="history-section">
+        <div class="history-header">
+            <h3>📜 评估历史</h3>
+            <button class="btn-clear" onclick="clearHistory()">清空记录</button>
+        </div>
+        <ul id="historyList" class="history-list">
+            </ul>
+    </div>
+
+    <div class="result-bar" id="resultBar">
+        <div class="res-text">
+            <div class="score-display" id="totalScore">0.0</div>
+            <div class="verdict-display" id="verdictText">计算中...</div>
+            <div class="score-hint">*得分越高，越不建议购买</div>
+        </div>
+        <div class="action-group">
+            <select id="decisionSelect">
+                <option value="stop">我不买了</option>
+                <option value="wait">我等等看</option>
+                <option value="buy">我还是要剁手</option>
+            </select>
+            <button class="save-btn" onclick="saveResult()">💾 保存并记录</button>
+        </div>
+    </div>
+
+<script>
+    let currentTab = 'elec';
+    let currentScore = 0;
+    let currentVerdict = "";
+    let colorClass = "";
+
+    const clothSection3Items = 4;
+    const currentMonth = new Date().getMonth(); // 0-11
+    const currentYear = new Date().getFullYear();
+
+    // 更新月份显示
+    document.getElementById('currentMonth').innerText = `${currentYear}年${currentMonth + 1}月`;
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tab).classList.add('active');
+        const btns = document.querySelectorAll('.tab-btn');
+        if(tab === 'elec') btns[0].classList.add('active');
+        else btns[1].classList.add('active');
+        calc();
+        updatePrice(tab);
+    }
+    
+    // 更新价格显示并返回价格数值
+    function updatePrice(tab) {
+        const priceId = 'price-' + tab;
+        const valueId = 'v-price-' + tab;
+        const priceInput = document.getElementById(priceId);
+        if (priceInput) {
+            const priceValue = parseInt(priceInput.value);
+            document.getElementById(valueId).innerText = priceValue.toLocaleString();
+            return priceValue;
+        }
+        return 0;
+    }
+
+    function getVal(id) {
+        let v = parseInt(document.getElementById(id).value);
+        document.getElementById('v-'+id).innerText = v;
+        return v;
+    }
+
+    function calc() {
+        if(currentTab === 'elec') {
+            // E-Scale: S1:35%, S2:35%, S3:30% (3 items each)
+            let s1 = (getVal('e1') + getVal('e2') + getVal('e3')) / 3 * 0.35;
+            let s2 = (getVal('e4') + getVal('e5') + getVal('e6')) / 3 * 0.35;
+            let s3 = (getVal('e7') + getVal('e8') + getVal('e9')) / 3 * 0.30;
+            currentScore = s1 + s2 + s3;
+        } else {
+            // C-Scale: S1:40% (3 items), S2:30% (2 items), S3:30% (4 items)
+            let s1 = (getVal('c1') + getVal('c2') + getVal('c3')) / 3 * 0.40;
+            let s2 = (getVal('c4') + getVal('c5')) / 2 * 0.30;
+            let s3_sum = getVal('c6') + getVal('c7') + getVal('c8') + getVal('c9');
+            let s3 = (s3_sum / clothSection3Items) * 0.30;
+            currentScore = s1 + s2 + s3;
+        }
+        updateUI();
+    }
+
+    function updateUI() {
+        const scoreEl = document.getElementById('totalScore');
+        const textEl = document.getElementById('verdictText');
+
+        scoreEl.innerText = currentScore.toFixed(1);
+
+        let threshold1 = (currentTab === 'elec') ? 1.5 : 1.2;
+        let threshold2 = (currentTab === 'elec') ? 3.0 : 2.5;
+
+        scoreEl.classList.remove('c-green', 'c-yellow', 'c-red');
+        textEl.classList.remove('c-green', 'c-yellow', 'c-red');
+
+        if (currentScore <= threshold1) {
+            currentVerdict = "✅ 建议购买";
+            colorClass = "b-green";
+            scoreEl.classList.add('c-green');
+            textEl.classList.add('c-green');
+        } else if (currentScore <= threshold2) {
+            currentVerdict = "⏳ 延迟 15 天";
+            colorClass = "b-yellow";
+            scoreEl.classList.add('c-yellow');
+            textEl.classList.add('c-yellow');
+        } else {
+            currentVerdict = "🛑 不要买！";
+            colorClass = "b-red";
+            scoreEl.classList.add('c-red');
+            textEl.classList.add('c-red');
+        }
+        textEl.innerText = currentVerdict;
+    }
+
+    // --- History & Stats Functions ---
+
+    function getDecisionText(value) {
+        switch(value) {
+            case 'buy': return { text: '我还是要剁手', class: 'd-buy', value: 'buy' };
+            case 'wait': return { text: '我等等看', class: 'd-wait', value: 'wait' };
+            case 'stop': return { text: '我不买了', class: 'd-stop', value: 'stop' };
+            default: return { text: '我不买了', class: 'd-stop', value: 'stop' }; 
+        }
+    }
+
+    // 计算月度统计 (基于你定义的复杂逻辑)
+    function calculateMonthlyStats() {
+        let history = JSON.parse(localStorage.getItem('shopHistory') || "[]");
+        
+        let stats = {
+            savedCount: 0, savedAmount: 0,
+            impulseCount: 0, impulseAmount: 0,
+            rationalCount: 0, rationalAmount: 0,
+        };
+
+        history.forEach(item => {
+            const recordDate = new Date(item.id);
+            // 只统计本月记录
+            if (recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear) {
+                // priceStored是带逗号的字符串，转回数字
+                const priceValue = parseInt(String(item.price).replace(/,/g, '')); 
+                
+                // 1. 已省 (Saved): 最终决策是 "我不买了" (stop) 或 "我等等看" (wait)
+                if (item.decisionValue === 'stop' || item.decisionValue === 'wait') {
+                    stats.savedCount++;
+                    stats.savedAmount += priceValue;
+                } 
+                
+                // 2. 冲动消费 (Impulse): Verdict是 "不要买" 或 "延迟 15 天" 且 最终决策是 "我还是要剁手" (buy)
+                else if (item.decisionValue === 'buy' && 
+                         (item.verdict === '🛑 不要买！' || item.verdict === '⏳ 延迟 15 天')) {
+                    stats.impulseCount++;
+                    stats.impulseAmount += priceValue;
+                } 
+                
+                // 3. 合理消费 (Rational): Verdict是 "建议购买" 且 最终决策是 "我还是要剁手" (buy)
+                else if (item.decisionValue === 'buy' && item.verdict === '✅ 建议购买') {
+                    stats.rationalCount++;
+                    stats.rationalAmount += priceValue;
+                }
+                // 其他情况（如数据损坏或意外值）则不计入统计
+            }
+        });
+
+        // 更新 UI
+        document.getElementById('savedCount').innerText = stats.savedCount;
+        document.getElementById('savedAmount').innerText = `¥${stats.savedAmount.toLocaleString()}`;
+        document.getElementById('impulseCount').innerText = stats.impulseCount;
+        document.getElementById('impulseAmount').innerText = `¥${stats.impulseAmount.toLocaleString()}`;
+        document.getElementById('rationalCount').innerText = stats.rationalCount;
+        document.getElementById('rationalAmount').innerText = `¥${stats.rationalAmount.toLocaleString()}`;
+    }
+
+
+    function saveResult() {
+        const nameInput = document.getElementById('itemName');
+        const decisionSelectElement = document.getElementById('decisionSelect');
+        
+        if (nameInput.value.trim() === '') {
+            alert("请输入购买项目名称！");
+            nameInput.focus();
+            return;
+        }
+        
+        // 获取当前价格 (数值)
+        const currentPriceValue = updatePrice(currentTab);
+
+        const name = nameInput.value.trim();
+        const finalDecisionValue = decisionSelectElement.value;
+        const decisionInfo = getDecisionText(finalDecisionValue);
+        
+        const record = {
+            id: Date.now(),
+            name: name,
+            score: currentScore.toFixed(1),
+            verdict: currentVerdict,
+            color: colorClass,
+            finalDecision: decisionInfo.text,
+            decisionValue: decisionInfo.value, 
+            decisionClass: decisionInfo.class,
+            price: currentPriceValue.toLocaleString(), // 保存格式化的价格
+            date: new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' }) + " " + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+        };
+
+        let history = JSON.parse(localStorage.getItem('shopHistory') || "[]");
+        history.unshift(record);
+        localStorage.setItem('shopHistory', JSON.stringify(history));
+        
+        renderHistory();
+        calculateMonthlyStats(); // 保存后更新统计
+        
+        // Visual feedback and reset
+        const btn = document.querySelector('.save-btn');
+        let oldText = btn.innerText;
+        btn.innerText = "已保存！";
+        setTimeout(() => { btn.innerText = oldText; }, 1500);
+        nameInput.value = ''; 
+        decisionSelectElement.value = 'stop'; // 重置为 '我不买了'
+        
+        // 重置价格输入框的值
+        document.getElementById('price-elec').value = 0;
+        document.getElementById('v-price-elec').innerText = 0;
+        document.getElementById('price-cloth').value = 0;
+        document.getElementById('v-price-cloth').innerText = 0;
+    }
+    
+    // 更新历史记录的决策 (核心变动点，已包含更新统计的调用)
+    function updateDecision(selectElement) {
+        const id = parseInt(selectElement.id.replace('decision-select-', ''));
+        const newValue = selectElement.value;
+        const decisionInfo = getDecisionText(newValue);
+        
+        let history = JSON.parse(localStorage.getItem('shopHistory') || "[]");
+        
+        const index = history.findIndex(item => item.id === id);
+        
+        if (index > -1) {
+            history[index].finalDecision = decisionInfo.text;
+            history[index].decisionValue = decisionInfo.value;
+            history[index].decisionClass = decisionInfo.class;
+            
+            localStorage.setItem('shopHistory', JSON.stringify(history));
+            
+            // Re-render the list to update the visual feedback on the list item border
+            renderHistory();
+            calculateMonthlyStats(); // 【此处确保了更新统计】
+        }
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('historyList');
+        let history = JSON.parse(localStorage.getItem('shopHistory') || "[]");
+        
+        if (history.length === 0) {
+            list.innerHTML = `<li style="text-align: center; color: #94a3b8; margin-top: 20px;">暂无评估记录。开始你的第一次评估吧！</li>`;
+            return;
+        }
+
+        list.innerHTML = history.map(item => `
+            <li class="history-item ${item.decisionClass}">
+                <div class="h-info">
+                    <span class="h-name">${item.name}</span>
+                    <span class="h-date">${item.date} | 价格: ¥${item.price} | 评估分：${item.score} (${item.verdict})</span>
+                </div>
+                <div class="h-decision-group">
+                    <select id="decision-select-${item.id}" class="h-decision-select" onchange="updateDecision(this)">
+                        <option value="stop" ${item.decisionValue === 'stop' ? 'selected' : ''}>我不买了</option>
+                        <option value="wait" ${item.decisionValue === 'wait' ? 'selected' : ''}>我等等看</option>
+                        <option value="buy" ${item.decisionValue === 'buy' ? 'selected' : ''}>我还是要剁手</option>
+                    </select>
+                </div>
+            </li>
+        `).join('');
+    }
+
+    function clearHistory() {
+        if(confirm("确定要清空所有记录吗？此操作不可撤销。")) {
+            localStorage.removeItem('shopHistory');
+            renderHistory();
+            calculateMonthlyStats(); // 清空后更新统计
+        }
+    }
+
+    // Init
+    calc();
+    updatePrice('elec'); 
+    updatePrice('cloth');
+    renderHistory();
+    calculateMonthlyStats(); // 页面加载时计算并显示统计
+</script>
+
+</body>
+</html>
